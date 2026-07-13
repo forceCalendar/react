@@ -1,6 +1,6 @@
 {
   "name": "@forcecalendar/react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React adapter for forceCalendar - enterprise calendar Web Components",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,11 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node test/smoke.mjs"
@@ -29,7 +33,12 @@
     "react-dom": "^19",
     "typescript": "^5"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/forceCalendar/react.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forceCalendar/react.git"
+  },
   "license": "MIT",
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }
