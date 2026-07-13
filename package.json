@@ -22,12 +22,12 @@
   },
   "peerDependencies": {
     "@forcecalendar/core": ">=2.0.0",
-    "@forcecalendar/interface": ">=1.1.0",
+    "@forcecalendar/interface": ">=1.2.0",
     "react": ">=18"
   },
   "devDependencies": {
     "@forcecalendar/core": "^2.3.0",
-    "@forcecalendar/interface": "^1.1.0",
+    "@forcecalendar/interface": "^1.2.0",
     "@types/react": "^19",
     "react": "^19",
     "react-dom": "^19",
