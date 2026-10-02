@@ -1,6 +1,6 @@
 {
   "name": "@forcecalendar/react",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "React adapter for forceCalendar - enterprise calendar Web Components",
   "keywords": [
     "calendar",
