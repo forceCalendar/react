@@ -25,6 +25,7 @@ export function Accepted() {
       date={new Date()}
       weekStartsOn={1}
       theme="slds"
+      readOnly={false}
       id="cal"
       role="application"
       aria-label="Team calendar"
@@ -83,3 +84,10 @@ export function StructuralInputs(handle: ForceCalendarHandle, element: ForceCale
   element.updateEvent('plain', { start: '2026-10-03', owner: 'another team' });
   return document.querySelector<ForceCalendarElement>('forcecal-main');
 }
+
+export const readOnlyElement = (el: ForceCalendarElement): boolean => {
+  el.readOnly = true;
+  return el.readOnly;
+};
+// @ts-expect-error readOnly is a boolean, not an HTML attribute string
+export const invalidReadOnly = <ForceCalendar readOnly="false" />;

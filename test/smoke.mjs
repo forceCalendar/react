@@ -61,3 +61,11 @@ test('a forwarded ref does not break server rendering', () => {
   const html = renderToString(createElement(ForceCalendar, { ref }));
   assert.match(html, /forcecal-main/);
 });
+
+for (const readOnly of [true, false, undefined]) {
+  test(`SSR readOnly=${readOnly} uses boolean attribute presence`, async () => {
+    const html = renderToString(createElement(ForceCalendar, { readOnly }));
+    if (readOnly) assert.match(html, /\sreadonly(?:="")?(?:\s|>)/i);
+    else assert.doesNotMatch(html, /\sreadonly(?:=|\s|>)/i);
+  });
+}

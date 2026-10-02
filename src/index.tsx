@@ -45,6 +45,7 @@ declare global {
           'week-starts-on'?: number | string;
           height?: string;
           theme?: string;
+          readonly?: string;
           ref?: React.Ref<ForceCalendarElement>;
         };
       }
@@ -96,6 +97,8 @@ export interface ForceCalendarProps
   timezone?: string;
   weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   height?: string;
+  /** Disable interactive editing (interface >= 1.8.0). Defaults to false. */
+  readOnly?: boolean;
   /** Named theme preset (`"slds"`) or any theme name the element supports. */
   theme?: 'slds' | (string & {});
   className?: string;
@@ -263,6 +266,7 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
     weekStartsOn,
     height,
     theme,
+    readOnly,
     className,
     style,
     events,
@@ -383,6 +387,7 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
       week-starts-on={weekStartsOn}
       height={height}
       theme={theme}
+      readonly={readOnly ? '' : undefined}
     />
   );
 });

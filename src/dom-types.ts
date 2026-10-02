@@ -64,6 +64,8 @@ export interface ForceCalendarEventMap {
 }
 
 export interface ForceCalendarElement extends HTMLElement {
+  /** Disable interactive editing (interface >= 1.8.0); programmatic methods remain available. */
+  readOnly: boolean;
   /** Declarative form of `setEvents()` (reconciles with `removeMissing: true`). */
   events: CalendarEvent[];
   setEvents(events: Iterable<CalendarEvent>, options?: EventsSetOptions): EventsSetResult | null;
