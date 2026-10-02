@@ -46,6 +46,7 @@ declare global {
           height?: string;
           theme?: string;
           readonly?: string;
+          class?: string;
           ref?: React.Ref<ForceCalendarElement>;
         };
       }
@@ -378,7 +379,7 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
     <forcecal-main
       {...rest}
       ref={elementRef}
-      className={className}
+      class={className}
       style={style}
       view={view}
       date={dateAttr}
