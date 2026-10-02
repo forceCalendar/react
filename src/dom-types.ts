@@ -4,8 +4,9 @@
  * (methods, `events` accessor and the `calendar-*` DOM events) so that the
  * adapter and its consumers can talk to the element without `any`.
  *
- * Note: @forcecalendar/interface does not declare these itself yet; once it
- * does, this file becomes a re-export.
+ * These structural types remain available for interface 1.6 and plain event
+ * inputs. Newer interfaces own the global DOM tag mapping; redeclaring it here
+ * would conflict with their canonical element type.
  */
 
 export type CalendarView = 'month' | 'week' | 'day';
@@ -97,10 +98,4 @@ export interface ForceCalendarElement extends HTMLElement {
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions
   ): void;
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'forcecal-main': ForceCalendarElement;
-  }
 }

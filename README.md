@@ -133,6 +133,16 @@ export function Agenda() {
 
 ## Types
 
-The package exports `ForceCalendarProps`, `ForceCalendarHandle`, `CalendarEvent`, `CalendarView`, `VisibleRange`, `EventsSetOptions`, `EventsSetResult`, `ForceCalendarElement`, `ForceCalendarEventMap` and one `*Detail` type per callback. It also declares `forcecal-main` in `JSX.IntrinsicElements` and `HTMLElementTagNameMap`, so the raw element is type-checked if you render or query it yourself.
+The package exports `ForceCalendarProps`, `ForceCalendarHandle`, `CalendarEvent`, `CalendarView`, `VisibleRange`, `EventsSetOptions`, `EventsSetResult`, `ForceCalendarElement`, `ForceCalendarEventMap` and one `*Detail` type per callback. It also declares `forcecal-main` in `JSX.IntrinsicElements`, so the raw element is type-checked in JSX.
+
+The global `HTMLElementTagNameMap` mapping belongs to `@forcecalendar/interface` 1.7 and newer. Import its element type when using the raw DOM API. The adapter keeps its exported structural types, including plain `CalendarEvent` inputs, without redeclaring the global mapping:
+
+```ts
+import type { ForceCalendarElement } from '@forcecalendar/interface';
+
+const element: ForceCalendarElement = document.createElement('forcecal-main');
+```
+
+With interface 1.6, use the adapter's exported type explicitly for direct DOM access: `document.querySelector<ForceCalendarElement>('forcecal-main')`. The React component and its ref keep the same types across supported interface versions.
 
 Docs: [docs.forcecalendar.org](https://docs.forcecalendar.org) · License: [MIT](LICENSE)
