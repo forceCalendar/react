@@ -449,3 +449,14 @@ test('unmounting while definition is pending never schedules a callback', async 
     Object.defineProperty(globalThis, 'customElements', { value: registry, configurable: true, writable: true });
   }
 });
+
+test('className maps to class through updates and removal', async () => {
+  const { el, update } = await mount({ className: 'first' });
+  assert.equal(el.getAttribute('class'), 'first');
+  assert.equal(el.hasAttribute('classname'), false);
+  await update({ className: 'second active' });
+  assert.equal(el.getAttribute('class'), 'second active');
+  await update({});
+  assert.equal(el.hasAttribute('class'), false);
+  assert.equal(el.hasAttribute('classname'), false);
+});

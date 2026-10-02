@@ -146,3 +146,11 @@ const element: ForceCalendarElement = document.createElement('forcecal-main');
 With interface 1.6, use the adapter's exported type explicitly for direct DOM access: `document.querySelector<ForceCalendarElement>('forcecal-main')`. The React component and its ref keep the same types across supported interface versions.
 
 Docs: [docs.forcecalendar.org](https://docs.forcecalendar.org) · License: [MIT](LICENSE)
+
+### Read-only calendars
+
+Pass the boolean `readOnly` prop to disable interactive editing (requires
+`@forcecalendar/interface >= 1.8.0`). `false` or omission keeps editing enabled.
+The adapter maps this to the `readonly` boolean attribute consistently during
+server rendering, lazy element registration, and later prop changes.
+Programmatic event methods remain available in read-only mode.
