@@ -4,6 +4,8 @@
  * line below it stops being an error.
  */
 import { createRef, useRef } from 'react';
+// Loading both packages must not redeclare the global custom-element mapping.
+import type {} from '@forcecalendar/interface';
 import {
   ForceCalendar,
   type CalendarEvent,
@@ -11,7 +13,7 @@ import {
   type ForceCalendarElement,
   type ForceCalendarHandle,
   type RangeChangeDetail,
-} from '../src/index';
+} from '../dist/index.js';
 
 export function Accepted() {
   const handle = useRef<ForceCalendarHandle>(null);
@@ -70,4 +72,14 @@ export async function HandleTypes(handle: ForceCalendarHandle) {
   // @ts-expect-error setView only accepts a CalendarView
   handle.setView('year');
   return [range, deleted];
+}
+
+// Adapter input types stay structural, including custom fields and ISO dates.
+const plainEvent: CalendarEvent = { id: 'plain', start: '2026-10-02', owner: 'team' };
+export function StructuralInputs(handle: ForceCalendarHandle, element: ForceCalendarElement) {
+  handle.addEvent({ title: 'Draft', start: '2026-10-02' });
+  handle.setEvents([plainEvent]);
+  element.setEvents([plainEvent]);
+  element.updateEvent('plain', { start: '2026-10-03', owner: 'another team' });
+  return document.querySelector<ForceCalendarElement>('forcecal-main');
 }

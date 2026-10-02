@@ -17,7 +17,7 @@ import type {
   ForceCalendarElement,
   ForceCalendarEventMap,
   VisibleRange,
-} from './dom-types';
+} from './dom-types.js';
 
 export type {
   CalendarEvent,
@@ -27,7 +27,7 @@ export type {
   ForceCalendarElement,
   ForceCalendarEventMap,
   VisibleRange,
-} from './dom-types';
+} from './dom-types.js';
 
 const TAG = 'forcecal-main';
 const MIN_INTERFACE_VERSION = '1.6.0';
@@ -307,12 +307,22 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
 
     let rangeChangeSeen = false;
     let cancelled = false;
+    let initialRangeTimer: ReturnType<typeof setTimeout> | undefined;
+    const cancelInitialRange = () => {
+      if (initialRangeTimer !== undefined) {
+        clearTimeout(initialRangeTimer);
+        initialRangeTimer = undefined;
+      }
+    };
 
     // Attach synchronously, before the import: an element that upgrades while
     // the interface is loading dispatches its first events right away.
     const listeners = EVENT_MAP.map(([eventName, callbackName]) => {
       const listener = (e: Event) => {
-        if (eventName === 'calendar-range-change') rangeChangeSeen = true;
+        if (eventName === 'calendar-range-change') {
+          rangeChangeSeen = true;
+          cancelInitialRange();
+        }
         const callback = callbacks.current[callbackName] as ((detail: unknown) => void) | undefined;
         callback?.((e as CustomEvent).detail ?? {});
       };
@@ -322,15 +332,19 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
 
     whenDefined().then(
       () => {
-        // The element's own first calendar-range-change fires during upgrade,
-        // which can happen before this effect when the interface was already
-        // loaded. Report the initial window so consumers can fetch data for it.
-        const onRangeChange = callbacks.current.onRangeChange;
-        if (cancelled || rangeChangeSeen || !onRangeChange) return;
-        const range = typeof el.getVisibleRange === 'function' ? el.getVisibleRange() : null;
-        if (!range) return;
-        rangeChangeSeen = true;
-        onRangeChange({ ...range, ...readViewState(el, range) });
+        if (cancelled || rangeChangeSeen) return;
+        // Interface 1.7 defers its initial announcement until the next task.
+        // Give that event priority before seeding a range for older interfaces,
+        // or for an announcement that happened before our listeners attached.
+        initialRangeTimer = setTimeout(() => {
+          initialRangeTimer = undefined;
+          const onRangeChange = callbacks.current.onRangeChange;
+          if (cancelled || rangeChangeSeen || !onRangeChange) return;
+          const range = typeof el.getVisibleRange === 'function' ? el.getVisibleRange() : null;
+          if (!range) return;
+          rangeChangeSeen = true;
+          onRangeChange({ ...range, ...readViewState(el, range) });
+        }, 0);
       },
       error => {
         if (!cancelled) reportLoadFailure(error);
@@ -339,6 +353,7 @@ export const ForceCalendar = forwardRef<ForceCalendarHandle, ForceCalendarProps>
 
     return () => {
       cancelled = true;
+      cancelInitialRange();
       for (const [eventName, listener] of listeners) {
         el.removeEventListener(eventName, listener);
       }

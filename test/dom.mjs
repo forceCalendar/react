@@ -34,7 +34,7 @@ for (const key of [
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // react-dom must see the DOM globals when it is first evaluated.
-const { createElement, act, createRef } = await import('react');
+const { createElement, act, createRef, StrictMode } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { ForceCalendar } = await import('../dist/index.js');
 
@@ -53,6 +53,7 @@ const MAPPED_EVENTS = [
 class StubCalendar extends dom.window.HTMLElement {
   /** When set, the stub announces its range on connect like the real element does on first render. */
   static announceRangeOnConnect = false;
+  static deferRangeOnConnect = false;
 
   constructor() {
     super();
@@ -66,13 +67,15 @@ class StubCalendar extends dom.window.HTMLElement {
   connectedCallback() {
     if (StubCalendar.announceRangeOnConnect) {
       const { view, currentDate } = this.stateManager.getState();
-      this.dispatchEvent(
+      const announce = () => this.dispatchEvent(
         new dom.window.CustomEvent('calendar-range-change', {
           detail: { ...this.getVisibleRange(), view, date: currentDate, announcedBy: 'element' },
           bubbles: true,
           composed: true,
         })
       );
+      if (StubCalendar.deferRangeOnConnect) setTimeout(announce, 0);
+      else announce();
     }
   }
   addEventListener(type, listener, options) {
@@ -132,8 +135,11 @@ class StubCalendar extends dom.window.HTMLElement {
   }
 }
 
-before(() => {
+before(async () => {
   dom.window.customElements.define('forcecal-main', StubCalendar);
+  // Make timing tests deterministic: loading the interface is no longer racing
+  // the stub's announcement. The stub still owns the registered element.
+  await import('@forcecalendar/interface');
 });
 
 const mounted = [];
@@ -145,14 +151,18 @@ afterEach(async () => {
   }
 });
 
-async function mount(props) {
+async function mount(props, { strict = false } = {}) {
   const container = dom.window.document.createElement('div');
   dom.window.document.body.append(container);
   const root = createRoot(container);
   mounted.push({ root, container });
-  await act(() => root.render(createElement(ForceCalendar, props)));
+  const render = nextProps => {
+    const calendar = createElement(ForceCalendar, nextProps);
+    return strict ? createElement(StrictMode, null, calendar) : calendar;
+  };
+  await act(() => root.render(render(props)));
   const el = container.querySelector('forcecal-main');
-  const update = nextProps => act(() => root.render(createElement(ForceCalendar, nextProps)));
+  const update = nextProps => act(() => root.render(render(nextProps)));
   const unmount = async () => {
     await act(() => root.unmount());
     mounted.splice(mounted.findIndex(m => m.root === root), 1);
@@ -360,4 +370,82 @@ test('does not call onRangeChange at all when it is not provided', async () => {
   const { el } = await mount({});
   await settle();
   assert.equal(el.calls.some(c => c[0] === 'getVisibleRange'), false);
+});
+
+for (const strict of [false, true]) {
+  test(`deferred element announcement wins over readiness fallback${strict ? ' in StrictMode' : ''}`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    StubCalendar.announceRangeOnConnect = true;
+    StubCalendar.deferRangeOnConnect = true;
+    try {
+      const ranges = [];
+      const { el } = await mount({ onRangeChange: detail => ranges.push(detail) }, { strict });
+      assert.equal(ranges.length, 0, 'readiness must not synthesize before deferred DOM events');
+      await act(() => t.mock.timers.runAll());
+      assert.equal(ranges.length, 1);
+      assert.equal(ranges[0].announcedBy, 'element', 'the real element event takes priority');
+      assert.equal(el.calls.filter(c => c[0] === 'getVisibleRange').length, 1, 'no synthetic range read');
+      for (const [type] of MAPPED_EVENTS) assert.equal(el.listenerCounts.get(type), 1);
+
+      const repeated = { ...ranges[0] };
+      dispatch(el, 'calendar-range-change', repeated);
+      dispatch(el, 'calendar-range-change', repeated);
+      assert.equal(ranges.length, 3, 'later equal range events are not suppressed');
+      assert.equal(ranges[1], repeated);
+      assert.equal(ranges[2], repeated);
+    } finally {
+      StubCalendar.announceRangeOnConnect = false;
+      StubCalendar.deferRangeOnConnect = false;
+    }
+  });
+}
+
+test('StrictMode replays effects without duplicating the legacy readiness fallback', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const ranges = [];
+  await mount({ onRangeChange: detail => ranges.push(detail) }, { strict: true });
+  assert.equal(ranges.length, 0);
+  await act(() => t.mock.timers.runAll());
+  assert.equal(ranges.length, 1);
+});
+
+test('cancels a pending fallback on unmount', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const ranges = [];
+  const { el, unmount } = await mount({ onRangeChange: detail => ranges.push(detail) });
+  assert.equal(ranges.length, 0);
+  await unmount();
+  await act(() => t.mock.timers.runAll());
+  assert.equal(ranges.length, 0);
+  assert.equal(el.calls.some(c => c[0] === 'getVisibleRange'), false);
+});
+
+test('pending fallback reads the latest callback after a prop update', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const seen = [];
+  const { update } = await mount({ onRangeChange: () => seen.push('first') });
+  await update({ onRangeChange: () => seen.push('second') });
+  await act(() => t.mock.timers.runAll());
+  assert.deepEqual(seen, ['second']);
+});
+
+test('unmounting while definition is pending never schedules a callback', async t => {
+  const registry = dom.window.customElements;
+  let release;
+  const defined = new Promise(resolve => (release = resolve));
+  Object.defineProperty(globalThis, 'customElements', {
+    value: { whenDefined: () => defined }, configurable: true, writable: true,
+  });
+  try {
+    const ranges = [];
+    const { el, unmount } = await mount({ onRangeChange: detail => ranges.push(detail) });
+    await unmount();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    await act(async () => { release(); await defined; });
+    await act(() => t.mock.timers.runAll());
+    assert.deepEqual(ranges, []);
+    assert.equal(el.calls.some(c => c[0] === 'getVisibleRange'), false);
+  } finally {
+    Object.defineProperty(globalThis, 'customElements', { value: registry, configurable: true, writable: true });
+  }
 });
